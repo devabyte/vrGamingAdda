@@ -251,7 +251,7 @@ let deferredPrompt=null;
 function load(){
   try{waiters=JSON.parse(localStorage.getItem('to_waiters')||'[]')}catch(e){waiters=[]}
   try{orders=JSON.parse(localStorage.getItem('to_orders')||'[]')}catch(e){orders=[]}
-  if(!waiters.length)waiters=[{name:'Arjun'},{name:'Priya'},{name:'Rahul'}];
+  if(!waiters.length)waiters=[{name:'Jitin'},{name:'Deva'},{name:'Aman'}];
 }
 function save(){
   try{localStorage.setItem('to_waiters',JSON.stringify(waiters));localStorage.setItem('to_orders',JSON.stringify(orders))}catch(e){}
