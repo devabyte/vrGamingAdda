@@ -28,9 +28,11 @@
   }
   html,body{height:100%;overflow:hidden;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif}
   #app{height:100vh;display:flex;flex-direction:column;overflow:hidden;position:relative}
-  .screen{display:none;flex-direction:column;height:100%;overflow:hidden;animation:fadeIn 0.2s ease}
+  .screen{display:none;flex-direction:column;height:100%;min-height:0;overflow:hidden;animation:fadeIn 0.2s ease;position:relative}
   .screen.active{display:flex}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* Scrollable content */
 
   /* Top bar */
   .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;height:56px;display:flex;align-items:center;gap:12px;flex-shrink:0;position:relative}
@@ -40,7 +42,7 @@
   .icon-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
   /* Scrollable content */
-  .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;display:flex;flex-direction:column;gap:12px}
+  .content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;display:flex;flex-direction:column;gap:12px}
 
   /* Badges */
   .badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;font-size:11px;font-weight:700;background:#E24B4A;color:#fff}
@@ -182,12 +184,16 @@
       <span class="topbar-title" id="order-title">New order</span>
       <span class="badge" id="order-badge" style="display:none">0</span>
     </div>
-    <div class="content" id="menu-content"></div>
-    <div style="padding:0 16px 12px;flex-shrink:0">
-      <p class="label">Note (optional)</p>
-      <textarea id="order-note" rows="2" placeholder="Allergies, special requests…"></textarea>
+    <!-- single scrollable area -->
+    <div id="order-scroll" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px 100px 16px;display:flex;flex-direction:column;gap:12px">
+      <div id="menu-content"></div>
+      <div>
+        <p class="label">Note (optional)</p>
+        <textarea id="order-note" rows="2" placeholder="Allergies, special requests…"></textarea>
+      </div>
     </div>
-    <div class="order-footer">
+    <!-- pinned footer -->
+    <div class="order-footer" style="position:absolute;bottom:0;left:0;right:0;">
       <button class="submit-btn" id="submit-btn" onclick="submitOrder()" disabled>
         <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
         Place order
@@ -251,7 +257,7 @@ let deferredPrompt=null;
 function load(){
   try{waiters=JSON.parse(localStorage.getItem('to_waiters')||'[]')}catch(e){waiters=[]}
   try{orders=JSON.parse(localStorage.getItem('to_orders')||'[]')}catch(e){orders=[]}
-  if(!waiters.length)waiters=[{name:'Jitin'},{name:'Deva'},{name:'Aman'}];
+  if(!waiters.length)waiters=[{name:'Arjun'},{name:'Priya'},{name:'Rahul'}];
 }
 function save(){
   try{localStorage.setItem('to_waiters',JSON.stringify(waiters));localStorage.setItem('to_orders',JSON.stringify(orders))}catch(e){}
@@ -313,36 +319,59 @@ function startOrder(name,idx){
   renderMenu();go('s-order');
 }
 
+// Flat menu index for reliable keying
+const MENU_FLAT=[];
+(function(){
+  Object.entries(MENU).forEach(([cat,items])=>{
+    items.forEach(item=>MENU_FLAT.push({cat,name:item.name,price:item.price}));
+  });
+})();
+
 function renderMenu(){
   const c=document.getElementById('menu-content');
   c.innerHTML='';
-  Object.entries(MENU).forEach(([cat,items])=>{
-    const section=document.createElement('div');
-    section.className='menu-section';
-    const hdr=document.createElement('div');
-    hdr.className='menu-cat-header';
-    hdr.textContent=cat;
-    section.appendChild(hdr);
-    items.forEach((item,i)=>{
-      const key=cat+'__'+i;
-      const kid=key.replace(/[^a-z0-9]/gi,'_');
-      const row=document.createElement('div');
-      row.className='menu-item';
-      row.innerHTML=`<div class="item-left">
-          <div class="item-name">${item.name}</div>
-          <div class="item-price">₹${item.price}</div>
-        </div>
-        <div class="qty-ctrl">
-          <button class="qty-btn" id="btn-minus-${kid}" aria-label="decrease">−</button>
-          <span class="qty-num" id="qty-${kid}">0</span>
-          <button class="qty-btn" id="btn-plus-${kid}" aria-label="increase">+</button>
-        </div>`;
-      row.querySelector('[aria-label="decrease"]').addEventListener('click',()=>chg(key,-1));
-      row.querySelector('[aria-label="increase"]').addEventListener('click',()=>chg(key,1));
-      section.appendChild(row);
-    });
-    c.appendChild(section);
+  let lastCat=null;
+  let section=null;
+  MENU_FLAT.forEach((item,idx)=>{
+    if(item.cat!==lastCat){
+      if(section)c.appendChild(section);
+      section=document.createElement('div');
+      section.className='menu-section';
+      const hdr=document.createElement('div');
+      hdr.className='menu-cat-header';
+      hdr.textContent=item.cat;
+      section.appendChild(hdr);
+      lastCat=item.cat;
+    }
+    const row=document.createElement('div');
+    row.className='menu-item';
+    const left=document.createElement('div');
+    left.className='item-left';
+    left.innerHTML='<div class="item-name">'+item.name+'</div><div class="item-price">&#8377;'+item.price+'</div>';
+    const ctrl=document.createElement('div');
+    ctrl.className='qty-ctrl';
+    const btnM=document.createElement('button');
+    btnM.className='qty-btn';btnM.textContent='−';btnM.setAttribute('aria-label','decrease');
+    const qspan=document.createElement('span');
+    qspan.className='qty-num';qspan.id='qty-'+idx;qspan.textContent='0';
+    const btnP=document.createElement('button');
+    btnP.className='qty-btn';btnP.textContent='+';btnP.setAttribute('aria-label','increase');
+    btnM.addEventListener('click',function(){chgFlat(idx,-1);});
+    btnP.addEventListener('click',function(){chgFlat(idx,1);});
+    ctrl.appendChild(btnM);ctrl.appendChild(qspan);ctrl.appendChild(btnP);
+    row.appendChild(left);row.appendChild(ctrl);
+    section.appendChild(row);
   });
+  if(section)c.appendChild(section);
+  updCount();
+}
+
+function chgFlat(idx,d){
+  const key='item__'+idx;
+  curQty[key]=(curQty[key]||0)+d;
+  if(curQty[key]<0)curQty[key]=0;
+  const el=document.getElementById('qty-'+idx);
+  if(el){el.textContent=curQty[key];el.className='qty-num'+(curQty[key]?' nonzero':'');}
   updCount();
 }
 
@@ -369,8 +398,9 @@ function submitOrder(){
   const items=[];let total=0;
   Object.entries(curQty).forEach(([key,qty])=>{
     if(!qty)return;
-    const [cat,idxS]=key.split('__');
-    const item=MENU[cat][+idxS];
+    const idx=+key.replace('item__','');
+    const item=MENU_FLAT[idx];
+    if(!item)return;
     items.push({name:item.name,qty,price:item.price,subtotal:item.price*qty});
     total+=item.price*qty;
   });
