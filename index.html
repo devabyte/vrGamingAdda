@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#1D9E75"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="TableOrder"/>
+<meta name="description" content="Restaurant order management for waiters"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icons/icon-192.png"/>
+<title>TableOrder</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{
+    --green:#1D9E75;--green-light:#E1F5EE;--green-dark:#085041;
+    --amber:#BA7517;--amber-light:#FAEEDA;
+    --red:#A32D2D;--red-light:#FCEBEB;
+    --purple-light:#EEEDFE;--purple-dark:#3C3489;
+    --teal-light:#E1F5EE;--teal-dark:#085041;
+    --coral-light:#FAECE7;--coral-dark:#712B13;
+    --blue-light:#E6F1FB;--blue-dark:#0C447C;
+    --pink-light:#FBEAF0;--pink-dark:#72243E;
+    --bg:#F8F7F4;--surface:#fff;--border:#E5E4E0;
+    --text:#1A1A18;--text2:#6B6A65;--text3:#9E9D98;
+    --radius:14px;--radius-sm:10px;
+  }
+  html,body{height:100%;overflow:hidden;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif}
+  #app{height:100vh;display:flex;flex-direction:column;overflow:hidden;position:relative}
+  .screen{display:none;flex-direction:column;height:100%;min-height:0;overflow:hidden;animation:fadeIn 0.2s ease;position:relative}
+  .screen.active{display:flex}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* Scrollable content */
+
+  /* Top bar */
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;height:56px;display:flex;align-items:center;gap:12px;flex-shrink:0;position:relative}
+  .topbar-title{font-size:17px;font-weight:600;color:var(--text);flex:1;letter-spacing:-0.3px}
+  .icon-btn{width:36px;height:36px;border-radius:50%;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)}
+  .icon-btn:active{background:var(--bg)}
+  .icon-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+  /* Scrollable content */
+  .content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;display:flex;flex-direction:column;gap:12px}
+
+  /* Badges */
+  .badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;font-size:11px;font-weight:700;background:#E24B4A;color:#fff}
+  .badge-amber{background:var(--amber-light);color:var(--amber)}
+  .badge-green{background:var(--green-light);color:var(--green-dark)}
+
+  /* Section label */
+  .label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px}
+
+  /* Waiter cards */
+  .waiter-card{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all 0.15s;-webkit-user-select:none;user-select:none}
+  .waiter-card:active{transform:scale(0.98);background:var(--bg)}
+  .avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;letter-spacing:0.5px}
+  .av0{background:var(--purple-light);color:var(--purple-dark)}
+  .av1{background:var(--teal-light);color:var(--teal-dark)}
+  .av2{background:var(--coral-light);color:var(--coral-dark)}
+  .av3{background:var(--blue-light);color:var(--blue-dark)}
+  .av4{background:var(--pink-light);color:var(--pink-dark)}
+  .waiter-info{flex:1;min-width:0}
+  .waiter-name{font-size:15px;font-weight:600;color:var(--text)}
+  .waiter-sub{font-size:13px;color:var(--text2);margin-top:2px}
+  .chevron-icon{color:var(--text3);flex-shrink:0}
+  .chevron-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  /* Add waiter card */
+  .add-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+  .input-row{display:flex;gap:8px;margin-top:8px}
+  input[type=text],textarea{flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;font-size:15px;background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none}
+  input[type=text]:focus,textarea:focus{border-color:var(--green);background:var(--surface)}
+  textarea{resize:none;line-height:1.5}
+  .add-btn{padding:10px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;-webkit-user-select:none}
+  .add-btn:active{background:var(--bg)}
+
+  /* Menu */
+  .menu-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .menu-cat-header{padding:10px 16px;background:var(--bg);font-size:12px;font-weight:700;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+  .menu-item{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);gap:12px}
+  .menu-item:last-child{border-bottom:none}
+  .item-left{flex:1;min-width:0}
+  .item-name{font-size:15px;color:var(--text);font-weight:500}
+  .item-price{font-size:13px;color:var(--text2);margin-top:2px}
+  .qty-ctrl{display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .qty-btn{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text);line-height:1;font-weight:400;-webkit-user-select:none}
+  .qty-btn:active{background:var(--bg);transform:scale(0.92)}
+  .qty-btn.has-qty{border-color:var(--green);color:var(--green)}
+  .qty-num{font-size:15px;font-weight:700;min-width:22px;text-align:center;color:var(--text)}
+  .qty-num.nonzero{color:var(--green)}
+
+  /* Footer */
+  .order-footer{background:var(--surface);border-top:1px solid var(--border);padding:12px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom));flex-shrink:0}
+  .submit-btn{width:100%;padding:15px;border-radius:var(--radius);border:none;background:var(--green);color:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:-0.2px;transition:all 0.15s}
+  .submit-btn:active{transform:scale(0.98);background:#158a62}
+  .submit-btn:disabled{background:var(--border);color:var(--text3);cursor:not-allowed;transform:none}
+  .submit-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+
+  /* Dashboard tabs */
+  .tab-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+  .tab{flex:1;padding:13px;text-align:center;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2);border:none;background:none;border-bottom:2.5px solid transparent;transition:all 0.15s}
+  .tab.active{color:var(--green);border-bottom-color:var(--green)}
+
+  /* Order groups */
+  .order-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .order-group-hdr{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg);border-bottom:1px solid var(--border)}
+  .order-group-body{padding:0 14px}
+  .order-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:8px}
+  .order-row:last-child{border-bottom:none}
+  .order-item-name{font-size:14px;color:var(--text)}
+  .order-item-qty{font-size:13px;color:var(--text2)}
+  .order-item-price{font-size:14px;font-weight:600;color:var(--text)}
+  .order-note{font-size:12px;color:var(--text2);padding:8px 0;border-top:1px solid var(--border);margin-top:2px}
+  .order-footer-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0}
+  .order-total{font-size:15px;font-weight:700;color:var(--text)}
+  .done-btn{padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:600;color:var(--text2)}
+  .done-btn:active{background:var(--green-light);color:var(--green-dark);border-color:var(--green)}
+
+  /* Stats */
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px}
+  .stat-label{font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:500}
+  .stat-val{font-size:26px;font-weight:700;color:var(--text);letter-spacing:-0.5px}
+  .top-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
+  .top-row:last-child{border-bottom:none}
+
+  /* Empty state */
+  .empty{text-align:center;padding:50px 20px;color:var(--text3)}
+  .empty svg{width:40px;height:40px;margin-bottom:12px;stroke:var(--text3);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+  /* Owner button */
+  .owner-btn{padding:8px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:5px}
+  .owner-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  /* Toast */
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(10px);background:#1A1A18;color:#fff;padding:11px 22px;border-radius:30px;font-size:14px;font-weight:600;opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;white-space:nowrap}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* Pill */
+  .pill{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700}
+  .pill-amber{background:var(--amber-light);color:var(--amber)}
+  .pill-green{background:var(--green-light);color:var(--green-dark)}
+
+  /* App icon area */
+  .app-logo{width:36px;height:36px;background:var(--green);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .app-logo svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  .danger-btn{width:100%;padding:12px;border-radius:var(--radius-sm);border:1px solid #F7C1C1;background:none;color:var(--red);cursor:pointer;font-size:14px;font-weight:600;margin-top:4px}
+  .danger-btn:active{background:var(--red-light)}
+
+  /* Install banner */
+  .install-banner{background:var(--green-light);border:1px solid #9FE1CB;border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--green-dark)}
+  .install-banner svg{width:18px;height:18px;stroke:var(--green);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+  .install-btn-small{margin-left:auto;padding:6px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+
+  /* PIN screen */
+  #pin-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:28px}
+  #pin-screen .app-logo-lg{width:64px;height:64px;background:var(--green);border-radius:16px;display:flex;align-items:center;justify-content:center}
+  #pin-screen .app-logo-lg svg{width:36px;height:36px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  #pin-screen h2{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-0.4px}
+  #pin-screen p{font-size:14px;color:var(--text2);margin-top:-20px}
+  .pin-dots{display:flex;gap:16px}
+  .pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:all 0.15s}
+  .pin-dot.filled{background:var(--green);border-color:var(--green)}
+  .pin-dot.error{background:var(--red);border-color:var(--red)}
+  .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:280px}
+  .pin-btn{height:68px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);font-size:24px;font-weight:600;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-user-select:none;transition:all 0.1s}
+  .pin-btn:active{background:var(--green-light);border-color:var(--green);transform:scale(0.95)}
+  .pin-btn.del{font-size:18px;color:var(--text2)}
+  .pin-btn.empty{border:none;background:none;cursor:default}
+  .pin-error{font-size:13px;color:var(--red);font-weight:600;min-height:18px}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- PIN LOCK -->
+  <div id="pin-screen">
+    <div class="app-logo-lg">
+      <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+    </div>
+    <h2>TableOrder</h2>
+    <p>Enter your PIN to continue</p>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <div class="pin-btn empty"></div>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn del" onclick="pinDel()">⌫</button>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+  </div>
+
+  <div class="toast" id="toast">✓ Order placed!</div>
+
+  <!-- HOME -->
+  <div class="screen active" id="s-home">
+    <div class="topbar">
+      <div class="app-logo">
+        <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+      </div>
+      <span class="topbar-title">TableOrder</span>
+      <button class="owner-btn" onclick="go('s-dash')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Owner
+      </button>
+    </div>
+    <div class="content" id="home-content"></div>
+  </div>
+
+  <!-- ORDER -->
+  <div class="screen" id="s-order">
+    <div class="topbar">
+      <button class="icon-btn" onclick="go('s-home')" aria-label="Back">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="topbar-title" id="order-title">New order</span>
+      <span class="badge" id="order-badge" style="display:none">0</span>
+    </div>
+    <!-- single scrollable area -->
+    <div id="order-scroll" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px 100px 16px;display:flex;flex-direction:column;gap:12px">
+      <div id="menu-content"></div>
+      <div>
+        <p class="label">Note (optional)</p>
+        <textarea id="order-note" rows="2" placeholder="Allergies, special requests…"></textarea>
+      </div>
+    </div>
+    <!-- pinned footer -->
+    <div class="order-footer" style="position:absolute;bottom:0;left:0;right:0;">
+      <button class="submit-btn" id="submit-btn" onclick="submitOrder()" disabled>
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Place order
+      </button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="screen" id="s-dash">
+    <div class="topbar">
+      <button class="icon-btn" onclick="go('s-home')" aria-label="Back">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="topbar-title">Owner view</span>
+      <button class="icon-btn" onclick="renderDash()" aria-label="Refresh">
+        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
+    </div>
+    <div class="tab-bar">
+      <button class="tab active" id="tab-live" onclick="switchTab('live')">Live orders</button>
+      <button class="tab" id="tab-sum" onclick="switchTab('summary')">Summary</button>
+    </div>
+    <div class="content" id="dash-content"></div>
+  </div>
+</div>
+
+<script>
+const COLORS=['av0','av1','av2','av3','av4'];
+const MENU={
+  'Starters':[
+    {name:'Soup of the day',price:120},
+    {name:'Garlic bread',price:80},
+    {name:'Paneer tikka',price:180},
+    {name:'Chicken wings',price:220},
+  ],
+  'Mains':[
+    {name:'Butter chicken',price:320},
+    {name:'Dal makhani',price:260},
+    {name:'Grilled fish',price:380},
+    {name:'Veg biryani',price:280},
+    {name:'Mutton curry',price:420},
+    {name:'Pasta arrabbiata',price:300},
+  ],
+  'Drinks':[
+    {name:'Lassi',price:80},
+    {name:'Fresh lime soda',price:70},
+    {name:'Chai',price:50},
+    {name:'Cold coffee',price:120},
+    {name:'Water (1L)',price:40},
+  ],
+  'Desserts':[
+    {name:'Gulab jamun',price:90},
+    {name:'Ice cream (scoop)',price:100},
+    {name:'Ras malai',price:130},
+  ]
+};
+
+let waiters=[];let orders=[];let curWaiter=null;let curQty={};let dashTab='live';
+let deferredPrompt=null;
+
+function load(){
+  try{waiters=JSON.parse(localStorage.getItem('to_waiters')||'[]')}catch(e){waiters=[]}
+  try{orders=JSON.parse(localStorage.getItem('to_orders')||'[]')}catch(e){orders=[]}
+  if(!waiters.length)waiters=[{name:'Arjun'},{name:'Priya'},{name:'Rahul'}];
+}
+function save(){
+  try{localStorage.setItem('to_waiters',JSON.stringify(waiters));localStorage.setItem('to_orders',JSON.stringify(orders))}catch(e){}
+}
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+  if(id==='s-home')renderHome();
+  if(id==='s-dash')renderDash();
+}
+function initials(n){return n.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2)}
+function fmtTime(iso){return new Date(iso).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}
+
+function renderHome(){
+  const c=document.getElementById('home-content');
+  let h='';
+  if(!localStorage.getItem('to_installed')){
+    h+=`<div class="install-banner"><svg viewBox="0 0 24 24"><path d="M12 2v13M5 9l7 7 7-7"/><path d="M3 20h18"/></svg><span>Install app on your phone</span><button class="install-btn-small" onclick="installApp()">Install</button></div>`;
+  }
+  h+=`<p class="label">Select waiter</p><div id="waiter-list" style="display:flex;flex-direction:column;gap:8px"></div>`;
+  h+=`<div class="add-card"><p class="label">Add waiter</p><div class="input-row"><input type="text" id="new-w" placeholder="Waiter name…" maxlength="30"/><button class="add-btn" onclick="addWaiter()">+ Add</button></div></div>`;
+  c.innerHTML=h;
+  renderWaiters();
+  document.getElementById('new-w').addEventListener('keydown',e=>{if(e.key==='Enter')addWaiter()});
+}
+
+function renderWaiters(){
+  const list=document.getElementById('waiter-list');
+  if(!list)return;
+  if(!waiters.length){list.innerHTML='<p style="color:var(--text3);font-size:14px;text-align:center;padding:20px">No waiters yet</p>';return;}
+  list.innerHTML='';
+  waiters.forEach((w,i)=>{
+    const pend=orders.filter(o=>o.waiter===w.name&&o.status==='pending').length;
+    const div=document.createElement('div');
+    div.className='waiter-card';
+    div.innerHTML=`<div class="avatar ${COLORS[i%5]}">${initials(w.name)}</div>
+      <div class="waiter-info">
+        <div class="waiter-name">${w.name}</div>
+        <div class="waiter-sub">${pend?pend+' active order'+(pend>1?'s':''):'No active orders'}</div>
+      </div>
+      ${pend?`<span class="badge">${pend}</span>`:''}
+      <div class="chevron-icon"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>`;
+    div.addEventListener('click',()=>startOrder(w.name,i));
+    list.appendChild(div);
+  });
+}
+
+function addWaiter(){
+  const inp=document.getElementById('new-w');
+  const n=inp.value.trim();
+  if(!n||waiters.find(w=>w.name.toLowerCase()===n.toLowerCase()))return;
+  waiters.push({name:n});save();inp.value='';renderWaiters();
+}
+
+function startOrder(name,idx){
+  curWaiter={name,idx};curQty={};
+  document.getElementById('order-title').textContent=name;
+  document.getElementById('order-note').value='';
+  renderMenu();go('s-order');
+}
+
+// Flat menu index for reliable keying
+const MENU_FLAT=[];
+(function(){
+  Object.entries(MENU).forEach(([cat,items])=>{
+    items.forEach(item=>MENU_FLAT.push({cat,name:item.name,price:item.price}));
+  });
+})();
+
+function renderMenu(){
+  const c=document.getElementById('menu-content');
+  c.innerHTML='';
+  let lastCat=null;
+  let section=null;
+  MENU_FLAT.forEach((item,idx)=>{
+    if(item.cat!==lastCat){
+      if(section)c.appendChild(section);
+      section=document.createElement('div');
+      section.className='menu-section';
+      const hdr=document.createElement('div');
+      hdr.className='menu-cat-header';
+      hdr.textContent=item.cat;
+      section.appendChild(hdr);
+      lastCat=item.cat;
+    }
+    const row=document.createElement('div');
+    row.className='menu-item';
+    const left=document.createElement('div');
+    left.className='item-left';
+    left.innerHTML='<div class="item-name">'+item.name+'</div><div class="item-price">&#8377;'+item.price+'</div>';
+    const ctrl=document.createElement('div');
+    ctrl.className='qty-ctrl';
+    const btnM=document.createElement('button');
+    btnM.className='qty-btn';btnM.textContent='−';btnM.setAttribute('aria-label','decrease');
+    const qspan=document.createElement('span');
+    qspan.className='qty-num';qspan.id='qty-'+idx;qspan.textContent='0';
+    const btnP=document.createElement('button');
+    btnP.className='qty-btn';btnP.textContent='+';btnP.setAttribute('aria-label','increase');
+    btnM.addEventListener('click',function(){chgFlat(idx,-1);});
+    btnP.addEventListener('click',function(){chgFlat(idx,1);});
+    ctrl.appendChild(btnM);ctrl.appendChild(qspan);ctrl.appendChild(btnP);
+    row.appendChild(left);row.appendChild(ctrl);
+    section.appendChild(row);
+  });
+  if(section)c.appendChild(section);
+  updCount();
+}
+
+function chgFlat(idx,d){
+  const key='item__'+idx;
+  curQty[key]=(curQty[key]||0)+d;
+  if(curQty[key]<0)curQty[key]=0;
+  const el=document.getElementById('qty-'+idx);
+  if(el){el.textContent=curQty[key];el.className='qty-num'+(curQty[key]?' nonzero':'');}
+  updCount();
+}
+
+function chg(key,d){
+  curQty[key]=(curQty[key]||0)+d;
+  if(curQty[key]<0)curQty[key]=0;
+  const kid=key.replace(/[^a-z0-9]/gi,'_');
+  const el=document.getElementById('qty-'+kid);
+  if(el){el.textContent=curQty[key];el.className='qty-num'+(curQty[key]?' nonzero':'');}
+  const mb=document.getElementById('btn-minus-'+kid);
+  if(mb)mb.className='qty-btn'+(curQty[key]?' has-qty':'');
+  updCount();
+}
+
+function updCount(){
+  const total=Object.values(curQty).reduce((a,b)=>a+b,0);
+  const badge=document.getElementById('order-badge');
+  const btn=document.getElementById('submit-btn');
+  badge.textContent=total;badge.style.display=total?'':'none';
+  btn.disabled=!total;
+}
+
+// ═══════════════════════════════════════════
+// PASTE YOUR GOOGLE APPS SCRIPT URL BELOW
+// (see setup guide — looks like https://script.google.com/macros/s/YOUR_ID/exec)
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwkfYgNyW_S9Rw85KS8U5gDI3LcBfUu8rV6YBR1NcaCzdYKHyIm6TLwrDQSuVK8_bpk0g/exec';
+// ═══════════════════════════════════════════
+
+function submitOrder(){
+  const items=[];let total=0;
+  Object.entries(curQty).forEach(([key,qty])=>{
+    if(!qty)return;
+    const idx=+key.replace('item__','');
+    const item=MENU_FLAT[idx];
+    if(!item)return;
+    items.push({name:item.name,qty,price:item.price,subtotal:item.price*qty});
+    total+=item.price*qty;
+  });
+  const note=document.getElementById('order-note').value.trim();
+  const order={id:Date.now(),waiter:curWaiter.name,items,total,note,time:new Date().toISOString(),status:'pending'};
+  orders.push(order);
+  save();
+  sendToSheets(order);
+  showToast('✓ Order placed!');
+  go('s-home');
+}
+
+function sendToSheets(order){
+  if(!SCRIPT_URL)return;
+  // Send each item as a separate GET request — Apps Script handles GET reliably
+  order.items.forEach(function(it){
+    const params=new URLSearchParams({
+      date: new Date(order.time).toLocaleDateString('en-IN'),
+      time: new Date(order.time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+      waiter: order.waiter,
+      item: it.name,
+      qty: it.qty,
+      price: it.price,
+      subtotal: it.subtotal,
+      order_total: order.total,
+      note: order.note||''
+    });
+    fetch(SCRIPT_URL+'?'+params.toString(),{method:'GET',mode:'no-cors'}).catch(function(){});
+  });
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+let dashTabCur='live';
+function switchTab(t){
+  dashTabCur=t;
+  document.getElementById('tab-live').className='tab'+(t==='live'?' active':'');
+  document.getElementById('tab-sum').className='tab'+(t==='summary'?' active':'');
+  renderDash();
+}
+
+function renderDash(){
+  const c=document.getElementById('dash-content');
+  if(dashTabCur==='live')renderLive(c);else renderSummary(c);
+}
+
+function renderLive(c){
+  const pend=orders.filter(o=>o.status==='pending');
+  if(!pend.length){c.innerHTML=`<div class="empty"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg><p>No pending orders</p></div>`;return;}
+  c.innerHTML=pend.slice().reverse().map(o=>{
+    const wi=waiters.findIndex(w=>w.name===o.waiter);
+    const av=COLORS[wi>=0?wi%5:0];
+    return `<div class="order-group">
+      <div class="order-group-hdr">
+        <div class="avatar ${av}" style="width:34px;height:34px;font-size:12px">${initials(o.waiter)}</div>
+        <div style="flex:1"><span style="font-size:15px;font-weight:700;color:var(--text)">${o.waiter}</span>
+          <span style="font-size:12px;color:var(--text3);margin-left:8px">${fmtTime(o.time)}</span></div>
+        <span class="pill pill-amber">Pending</span>
+      </div>
+      <div class="order-group-body">
+        ${o.items.map(it=>`<div class="order-row">
+          <span class="order-item-name">${it.name}</span>
+          <span style="display:flex;gap:8px;align-items:center">
+            <span class="order-item-qty">×${it.qty}</span>
+            <span class="order-item-price">₹${it.subtotal}</span>
+          </span>
+        </div>`).join('')}
+        ${o.note?`<div class="order-note">📝 ${o.note}</div>`:''}
+        <div class="order-footer-row">
+          <span class="order-total">Total ₹${o.total.toLocaleString('en-IN')}</span>
+          <button class="done-btn" onclick="markDone(${o.id})">✓ Mark done</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function markDone(id){
+  const o=orders.find(o=>o.id===id);
+  if(o){o.status='done';save();showToast('Order marked done');renderDash();}
+}
+
+function renderSummary(c){
+  const total=orders.reduce((a,o)=>a+o.total,0);
+  const done=orders.filter(o=>o.status==='done').length;
+  const pend=orders.filter(o=>o.status==='pending').length;
+  const itemMap={};
+  orders.forEach(o=>o.items.forEach(it=>{itemMap[it.name]=(itemMap[it.name]||0)+it.qty}));
+  const topItems=Object.entries(itemMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const wMap={};
+  orders.forEach(o=>{wMap[o.waiter]=(wMap[o.waiter]||0)+1});
+  const wList=Object.entries(wMap).sort((a,b)=>b[1]-a[1]);
+  c.innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Total orders</div><div class="stat-val">${orders.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Revenue</div><div class="stat-val" style="font-size:20px">₹${total.toLocaleString('en-IN')}</div></div>
+      <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-val" style="color:${pend?'var(--amber)':'var(--text)'}">${pend}</div></div>
+      <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-val" style="color:var(--green-dark)">${done}</div></div>
+    </div>
+    ${topItems.length?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
+      <p class="label" style="margin-bottom:8px">Top items ordered</p>
+      ${topItems.map(([n,q])=>`<div class="top-row"><span style="color:var(--text)">${n}</span><span style="font-weight:700;color:var(--text)">×${q}</span></div>`).join('')}
+    </div>`:''}
+    ${wList.length?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
+      <p class="label" style="margin-bottom:8px">Orders by waiter</p>
+      ${wList.map(([n,q])=>`<div class="top-row"><span style="color:var(--text)">${n}</span><span style="font-weight:700;color:var(--text)">${q} order${q>1?'s':''}</span></div>`).join('')}
+    </div>`:''}
+    ${!orders.length?'<div class="empty"><p>No orders yet</p></div>':''}
+    ${orders.length?`<button class="danger-btn" onclick="clearAll()">🗑 Clear all orders</button>`:''}
+  `;
+}
+
+function clearAll(){
+  if(!confirm('Clear all order history? This cannot be undone.'))return;
+  orders=[];save();renderDash();
+}
+
+function installApp(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(r=>{
+      if(r.outcome==='accepted'){localStorage.setItem('to_installed','1');renderHome();}
+      deferredPrompt=null;
+    });
+  } else {
+    alert('To install:\n\nAndroid Chrome: tap ⋮ menu → "Add to Home screen"\niPhone Safari: tap Share → "Add to Home Screen"');
+  }
+}
+
+// ═══════════════════════════════════════════
+// SET YOUR 4-DIGIT PIN BELOW
+const APP_PIN = '2808';
+// ═══════════════════════════════════════════
+
+let pinEntry='';
+function pinPress(d){
+  if(pinEntry.length>=4)return;
+  pinEntry+=d;
+  updatePinDots();
+  if(pinEntry.length===4)setTimeout(checkPin,120);
+}
+function pinDel(){
+  pinEntry=pinEntry.slice(0,-1);
+  updatePinDots(false);
+}
+function updatePinDots(err){
+  for(let i=0;i<4;i++){
+    const dot=document.getElementById('pd'+i);
+    dot.className='pin-dot'+(i<pinEntry.length?' filled':'')+(err?' error':'');
+  }
+}
+function checkPin(){
+  if(pinEntry===APP_PIN){
+    document.getElementById('pin-screen').style.display='none';
+    try{sessionStorage.setItem('to_auth','1');}catch(e){}
+  } else {
+    document.getElementById('pin-error').textContent='Wrong PIN, try again';
+    updatePinDots(true);
+    setTimeout(()=>{
+      pinEntry='';
+      updatePinDots(false);
+      document.getElementById('pin-error').textContent='';
+    },800);
+  }
+}
+
+// Check if already authenticated this session
+if(typeof sessionStorage!=='undefined'&&sessionStorage.getItem('to_auth')==='1'){
+  document.getElementById('pin-screen').style.display='none';
+}
+
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;});
+window.addEventListener('appinstalled',()=>{localStorage.setItem('to_installed','1');});
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js'));
+}
+
+load();renderHome();
+</script>
+</body>
+</html>
