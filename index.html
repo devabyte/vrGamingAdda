@@ -420,25 +420,21 @@ function submitOrder(){
 }
 
 function sendToSheets(order){
-  if(!SCRIPT_URL)return; // not configured yet
-  const rows=order.items.map(it=>({
-    date: new Date(order.time).toLocaleDateString('en-IN'),
-    time: new Date(order.time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
-    waiter: order.waiter,
-    item: it.name,
-    qty: it.qty,
-    price: it.price,
-    subtotal: it.subtotal,
-    order_total: order.total,
-    note: order.note||''
-  }));
-  // fire-and-forget, don't block UI
-  fetch(SCRIPT_URL,{
-    method:'POST',
-    mode:'no-cors',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({rows})
-  }).catch(()=>{}); // silently fail — order is already saved locally
+  if(!SCRIPT_URL)return;
+  order.items.forEach(function(it){
+    const params=new URLSearchParams({
+      date: new Date(order.time).toLocaleDateString('en-IN'),
+      time: new Date(order.time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+      waiter: order.waiter,
+      item: it.name,
+      qty: it.qty,
+      price: it.price,
+      subtotal: it.subtotal,
+      order_total: order.total,
+      note: order.note||''
+    });
+    fetch(SCRIPT_URL+'?'+params.toString(),{method:'GET',mode:'no-cors'}).catch(function(){});
+  });
 }
 
 function showToast(msg){
