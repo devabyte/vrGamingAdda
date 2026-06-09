@@ -282,18 +282,21 @@ function renderWaiters(){
   const list=document.getElementById('waiter-list');
   if(!list)return;
   if(!waiters.length){list.innerHTML='<p style="color:var(--text3);font-size:14px;text-align:center;padding:20px">No waiters yet</p>';return;}
-  list.innerHTML=waiters.map((w,i)=>{
+  list.innerHTML='';
+  waiters.forEach((w,i)=>{
     const pend=orders.filter(o=>o.waiter===w.name&&o.status==='pending').length;
-    return `<div class="waiter-card" onclick="startOrder('${w.name}',${i})">
-      <div class="avatar ${COLORS[i%5]}">${initials(w.name)}</div>
+    const div=document.createElement('div');
+    div.className='waiter-card';
+    div.innerHTML=`<div class="avatar ${COLORS[i%5]}">${initials(w.name)}</div>
       <div class="waiter-info">
         <div class="waiter-name">${w.name}</div>
         <div class="waiter-sub">${pend?pend+' active order'+(pend>1?'s':''):'No active orders'}</div>
       </div>
       ${pend?`<span class="badge">${pend}</span>`:''}
-      <div class="chevron-icon"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-    </div>`;
-  }).join('');
+      <div class="chevron-icon"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>`;
+    div.addEventListener('click',()=>startOrder(w.name,i));
+    list.appendChild(div);
+  });
 }
 
 function addWaiter(){
@@ -312,25 +315,34 @@ function startOrder(name,idx){
 
 function renderMenu(){
   const c=document.getElementById('menu-content');
-  c.innerHTML=Object.entries(MENU).map(([cat,items])=>`
-    <div class="menu-section">
-      <div class="menu-cat-header">${cat}</div>
-      ${items.map((item,i)=>{
-        const key=cat+'__'+i;
-        const kid=key.replace(/[^a-z0-9]/gi,'_');
-        return `<div class="menu-item">
-          <div class="item-left">
-            <div class="item-name">${item.name}</div>
-            <div class="item-price">₹${item.price}</div>
-          </div>
-          <div class="qty-ctrl">
-            <button class="qty-btn" id="btn-minus-${kid}" onclick="chg('${key}',-1)" aria-label="decrease">−</button>
-            <span class="qty-num" id="qty-${kid}">0</span>
-            <button class="qty-btn" onclick="chg('${key}',1)" aria-label="increase">+</button>
-          </div>
+  c.innerHTML='';
+  Object.entries(MENU).forEach(([cat,items])=>{
+    const section=document.createElement('div');
+    section.className='menu-section';
+    const hdr=document.createElement('div');
+    hdr.className='menu-cat-header';
+    hdr.textContent=cat;
+    section.appendChild(hdr);
+    items.forEach((item,i)=>{
+      const key=cat+'__'+i;
+      const kid=key.replace(/[^a-z0-9]/gi,'_');
+      const row=document.createElement('div');
+      row.className='menu-item';
+      row.innerHTML=`<div class="item-left">
+          <div class="item-name">${item.name}</div>
+          <div class="item-price">₹${item.price}</div>
+        </div>
+        <div class="qty-ctrl">
+          <button class="qty-btn" id="btn-minus-${kid}" aria-label="decrease">−</button>
+          <span class="qty-num" id="qty-${kid}">0</span>
+          <button class="qty-btn" id="btn-plus-${kid}" aria-label="increase">+</button>
         </div>`;
-      }).join('')}
-    </div>`).join('');
+      row.querySelector('[aria-label="decrease"]').addEventListener('click',()=>chg(key,-1));
+      row.querySelector('[aria-label="increase"]').addEventListener('click',()=>chg(key,1));
+      section.appendChild(row);
+    });
+    c.appendChild(section);
+  });
   updCount();
 }
 
