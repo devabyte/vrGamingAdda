@@ -154,10 +154,57 @@
   .install-banner{background:var(--green-light);border:1px solid #9FE1CB;border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--green-dark)}
   .install-banner svg{width:18px;height:18px;stroke:var(--green);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
   .install-btn-small{margin-left:auto;padding:6px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+
+  /* PIN screen */
+  #pin-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:28px}
+  #pin-screen .app-logo-lg{width:64px;height:64px;background:var(--green);border-radius:16px;display:flex;align-items:center;justify-content:center}
+  #pin-screen .app-logo-lg svg{width:36px;height:36px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  #pin-screen h2{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-0.4px}
+  #pin-screen p{font-size:14px;color:var(--text2);margin-top:-20px}
+  .pin-dots{display:flex;gap:16px}
+  .pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:all 0.15s}
+  .pin-dot.filled{background:var(--green);border-color:var(--green)}
+  .pin-dot.error{background:var(--red);border-color:var(--red)}
+  .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:280px}
+  .pin-btn{height:68px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);font-size:24px;font-weight:600;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-user-select:none;transition:all 0.1s}
+  .pin-btn:active{background:var(--green-light);border-color:var(--green);transform:scale(0.95)}
+  .pin-btn.del{font-size:18px;color:var(--text2)}
+  .pin-btn.empty{border:none;background:none;cursor:default}
+  .pin-error{font-size:13px;color:var(--red);font-weight:600;min-height:18px}
 </style>
 </head>
 <body>
 <div id="app">
+  <!-- PIN LOCK -->
+  <div id="pin-screen">
+    <div class="app-logo-lg">
+      <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+    </div>
+    <h2>TableOrder</h2>
+    <p>Enter your PIN to continue</p>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <div class="pin-btn empty"></div>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn del" onclick="pinDel()">⌫</button>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+  </div>
+
   <div class="toast" id="toast">✓ Order placed!</div>
 
   <!-- HOME -->
@@ -397,7 +444,7 @@ function updCount(){
 // ═══════════════════════════════════════════
 // PASTE YOUR GOOGLE APPS SCRIPT URL BELOW
 // (see setup guide — looks like https://script.google.com/macros/s/YOUR_ID/exec)
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwkfYgNyW_S9Rw85KS8U5gDI3LcBfUu8rV6YBR1NcaCzdYKHyIm6TLwrDQSuVK8_bpk0g/exec';
+const SCRIPT_URL = '';
 // ═══════════════════════════════════════════
 
 function submitOrder(){
@@ -421,6 +468,7 @@ function submitOrder(){
 
 function sendToSheets(order){
   if(!SCRIPT_URL)return;
+  // Send each item as a separate GET request — Apps Script handles GET reliably
   order.items.forEach(function(it){
     const params=new URLSearchParams({
       date: new Date(order.time).toLocaleDateString('en-IN'),
@@ -537,6 +585,48 @@ function installApp(){
   } else {
     alert('To install:\n\nAndroid Chrome: tap ⋮ menu → "Add to Home screen"\niPhone Safari: tap Share → "Add to Home Screen"');
   }
+}
+
+// ═══════════════════════════════════════════
+// SET YOUR 4-DIGIT PIN BELOW
+const APP_PIN = '2808';
+// ═══════════════════════════════════════════
+
+let pinEntry='';
+function pinPress(d){
+  if(pinEntry.length>=4)return;
+  pinEntry+=d;
+  updatePinDots();
+  if(pinEntry.length===4)setTimeout(checkPin,120);
+}
+function pinDel(){
+  pinEntry=pinEntry.slice(0,-1);
+  updatePinDots(false);
+}
+function updatePinDots(err){
+  for(let i=0;i<4;i++){
+    const dot=document.getElementById('pd'+i);
+    dot.className='pin-dot'+(i<pinEntry.length?' filled':'')+(err?' error':'');
+  }
+}
+function checkPin(){
+  if(pinEntry===APP_PIN){
+    document.getElementById('pin-screen').style.display='none';
+    try{sessionStorage.setItem('to_auth','1');}catch(e){}
+  } else {
+    document.getElementById('pin-error').textContent='Wrong PIN, try again';
+    updatePinDots(true);
+    setTimeout(()=>{
+      pinEntry='';
+      updatePinDots(false);
+      document.getElementById('pin-error').textContent='';
+    },800);
+  }
+}
+
+// Check if already authenticated this session
+if(typeof sessionStorage!=='undefined'&&sessionStorage.getItem('to_auth')==='1'){
+  document.getElementById('pin-screen').style.display='none';
 }
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;});
