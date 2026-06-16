@@ -268,31 +268,23 @@
 <script>
 const COLORS=['av0','av1','av2','av3','av4'];
 const MENU={
-  'Starters':[
-    {name:'Soup of the day',price:120},
-    {name:'Garlic bread',price:80},
-    {name:'Paneer tikka',price:180},
-    {name:'Chicken wings',price:220},
-  ],
-  'Mains':[
-    {name:'Butter chicken',price:320},
-    {name:'Dal makhani',price:260},
-    {name:'Grilled fish',price:380},
-    {name:'Veg biryani',price:280},
-    {name:'Mutton curry',price:420},
-    {name:'Pasta arrabbiata',price:300},
+  'Snacks':[
+    {name:'Maggi',price:60},
+    {name:'Popcorn',price:50},
+    {name:'Fries',price:100},
   ],
   'Drinks':[
-    {name:'Lassi',price:80},
-    {name:'Fresh lime soda',price:70},
-    {name:'Chai',price:50},
-    {name:'Cold coffee',price:120},
-    {name:'Water (1L)',price:40},
+    {name:'Tea',price:15},
+    {name:'Coffee',price:25},
+    {name:'Cold Drink 750 ml',price:40},
+    {name:'Monster',price:125},
+    {name:'Munchies',price:50},
+    {name:'Water',price:10},
   ],
-  'Desserts':[
-    {name:'Gulab jamun',price:90},
-    {name:'Ice cream (scoop)',price:100},
-    {name:'Ras malai',price:130},
+  'Combos':[
+    {name:'Mini Mission',price:120},
+    {name:'Gamer Fuel',price:160},
+    {name:'MVP Bundle',price:200},
   ]
 };
 
@@ -302,7 +294,7 @@ let deferredPrompt=null;
 function load(){
   try{waiters=JSON.parse(localStorage.getItem('to_waiters')||'[]')}catch(e){waiters=[]}
   try{orders=JSON.parse(localStorage.getItem('to_orders')||'[]')}catch(e){orders=[]}
-  if(!waiters.length)waiters=[{name:'Arjun'},{name:'Priya'},{name:'Rahul'}];
+  if(!waiters.length)waiters=[{name:'Jitin'},{name:'Deva'},{name:'Aman'}];
 }
 function save(){
   try{localStorage.setItem('to_waiters',JSON.stringify(waiters));localStorage.setItem('to_orders',JSON.stringify(orders))}catch(e){}
