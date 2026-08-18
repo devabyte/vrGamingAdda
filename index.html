@@ -453,7 +453,7 @@ function updCount(){
 // ═══════════════════════════════════════════
 // PASTE YOUR GOOGLE APPS SCRIPT URL BELOW
 // (see setup guide — looks like https://script.google.com/macros/s/YOUR_ID/exec)
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGngXR4R4RUAkAJ0-ly-8cphC_6T-o8ShOrRGv2VdZncFUZrfk20Nynz-xpS1_Y4ZitA/exec';
+const SCRIPT_URL = '__SCRIPT_URL__';
 // ═══════════════════════════════════════════
 
 function submitOrder(){
@@ -479,27 +479,29 @@ function showConfirmationScreen(order){
   // Build confirmation overlay
   const overlay=document.createElement('div');
   overlay.id='confirm-overlay';
-  overlay.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:8888;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:20px;animation:fadeIn 0.2s ease';
+  overlay.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:8888;display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;animation:fadeIn 0.2s ease';
 
-  const countdown={val:5};
+  const countdown={val:10};
   overlay.innerHTML=`
-    <div style="width:64px;height:64px;border-radius:50%;background:var(--amber-light);display:flex;align-items:center;justify-content:center">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    </div>
-    <h2 style="font-size:20px;font-weight:700;color:var(--text);letter-spacing:-0.3px">Verifying order…</h2>
-    <p style="font-size:14px;color:var(--text2);text-align:center">Checking with Google Sheets in <span id="cd-num">10</span>s</p>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:320px;padding:16px">
-      <p style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px">Items submitted</p>
-      ${order.items.map(it=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px">
-        <span style="color:var(--text)">${it.name}</span>
-        <span style="color:var(--text2)">×${it.qty}</span>
-      </div>`).join('')}
-      <div style="display:flex;justify-content:space-between;padding-top:10px;font-size:15px;font-weight:700">
-        <span style="color:var(--text)">Total</span>
-        <span style="color:var(--green)">₹${order.total.toLocaleString('en-IN')}</span>
+    <div style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;gap:16px;min-height:100%">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--amber-light);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>
+      <h2 style="font-size:20px;font-weight:700;color:var(--text);letter-spacing:-0.3px">Verifying order…</h2>
+      <p style="font-size:14px;color:var(--text2);text-align:center">Checking with Google Sheets in <span id="cd-num">10</span>s</p>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:320px;padding:16px">
+        <p style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px">Items submitted</p>
+        ${order.items.map(it=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px">
+          <span style="color:var(--text)">${it.name}</span>
+          <span style="color:var(--text2)">×${it.qty}</span>
+        </div>`).join('')}
+        <div style="display:flex;justify-content:space-between;padding-top:10px;font-size:15px;font-weight:700">
+          <span style="color:var(--text)">Total</span>
+          <span style="color:var(--green)">₹${order.total.toLocaleString('en-IN')}</span>
+        </div>
+      </div>
+      <div id="cd-result"></div>
     </div>
-    <div id="cd-result"></div>
   `;
   document.getElementById('app').appendChild(overlay);
 
@@ -573,19 +575,21 @@ function showVerifyResult(overlay, status, order, found){
 
 function sendToSheets(order){
   if(!SCRIPT_URL)return;
-  const rows=order.items.map(it=>({
-    date: new Date(order.time).toLocaleDateString('en-IN'),
-    time: new Date(order.time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
-    waiter: order.waiter,
-    item: it.name,
-    qty: it.qty,
-    price: it.price,
-    subtotal: it.subtotal,
-    order_total: order.total,
-    note: order.note||''
-  }));
-  const encoded=encodeURIComponent(JSON.stringify(rows));
-  fetch(SCRIPT_URL+'?action=write&rows='+encoded,{method:'GET',mode:'no-cors'}).catch(function(){});
+  // Send each item as a separate GET request — Apps Script handles GET reliably
+  order.items.forEach(function(it){
+    const params=new URLSearchParams({
+      date: new Date(order.time).toLocaleDateString('en-IN'),
+      time: new Date(order.time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+      waiter: order.waiter,
+      item: it.name,
+      qty: it.qty,
+      price: it.price,
+      subtotal: it.subtotal,
+      order_total: order.total,
+      note: order.note||''
+    });
+    fetch(SCRIPT_URL+'?'+params.toString(),{method:'GET',mode:'no-cors'}).catch(function(){});
+  });
 }
 
 function showToast(msg){
