@@ -453,7 +453,7 @@ function updCount(){
 // ═══════════════════════════════════════════
 // PASTE YOUR GOOGLE APPS SCRIPT URL BELOW
 // (see setup guide — looks like https://script.google.com/macros/s/YOUR_ID/exec)
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwkfYgNyW_S9Rw85KS8U5gDI3LcBfUu8rV6YBR1NcaCzdYKHyIm6TLwrDQSuVK8_bpk0g/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGngXR4R4RUAkAJ0-ly-8cphC_6T-o8ShOrRGv2VdZncFUZrfk20Nynz-xpS1_Y4ZitA/exec';
 // ═══════════════════════════════════════════
 
 function submitOrder(){
@@ -471,8 +471,104 @@ function submitOrder(){
   orders.push(order);
   save();
   sendToSheets(order);
-  showToast('✓ Order placed!');
   go('s-home');
+  showConfirmationScreen(order);
+}
+
+function showConfirmationScreen(order){
+  // Build confirmation overlay
+  const overlay=document.createElement('div');
+  overlay.id='confirm-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:8888;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:20px;animation:fadeIn 0.2s ease';
+
+  const countdown={val:5};
+  overlay.innerHTML=`
+    <div style="width:64px;height:64px;border-radius:50%;background:var(--amber-light);display:flex;align-items:center;justify-content:center">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <h2 style="font-size:20px;font-weight:700;color:var(--text);letter-spacing:-0.3px">Verifying order…</h2>
+    <p style="font-size:14px;color:var(--text2);text-align:center">Checking with Google Sheets in <span id="cd-num">5</span>s</p>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:320px;padding:16px">
+      <p style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px">Items submitted</p>
+      ${order.items.map(it=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px">
+        <span style="color:var(--text)">${it.name}</span>
+        <span style="color:var(--text2)">×${it.qty}</span>
+      </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding-top:10px;font-size:15px;font-weight:700">
+        <span style="color:var(--text)">Total</span>
+        <span style="color:var(--green)">₹${order.total.toLocaleString('en-IN')}</span>
+      </div>
+    </div>
+    <div id="cd-result"></div>
+  `;
+  document.getElementById('app').appendChild(overlay);
+
+  // Countdown
+  const cdEl=overlay.querySelector('#cd-num');
+  const interval=setInterval(()=>{
+    countdown.val--;
+    if(cdEl)cdEl.textContent=countdown.val;
+    if(countdown.val<=0)clearInterval(interval);
+  },1000);
+
+  // After 5s, fetch last rows from Sheets and verify
+  setTimeout(()=>{
+    verifyWithSheets(order, overlay);
+  },5000);
+}
+
+function verifyWithSheets(order, overlay){
+  const resultEl=overlay.querySelector('#cd-result');
+  if(!SCRIPT_URL||SCRIPT_URL==='__SCRIPT_URL__'){
+    showVerifyResult(overlay, 'local', order);
+    return;
+  }
+  fetch(SCRIPT_URL+'?action=read&limit='+order.items.length*2)
+    .then(r=>r.json())
+    .then(rows=>{
+      // Check if all items from this order appear in the last rows
+      const found=order.items.filter(it=>
+        rows.some(r=>r.item===it.name && r.waiter===order.waiter)
+      );
+      if(found.length===order.items.length){
+        showVerifyResult(overlay,'success',order);
+      } else {
+        showVerifyResult(overlay,'partial',order,found);
+      }
+    })
+    .catch(()=>{
+      showVerifyResult(overlay,'error',order);
+    });
+}
+
+function showVerifyResult(overlay, status, order, found){
+  const icon=overlay.querySelector('div');
+  const title=overlay.querySelector('h2');
+  const subtitle=overlay.querySelector('p');
+  const resultEl=overlay.querySelector('#cd-result');
+
+  if(status==='success'){
+    icon.style.background='var(--green-light)';
+    icon.innerHTML='<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    title.textContent='Order confirmed! ✓';
+    title.style.color='var(--green-dark)';
+    subtitle.textContent='All items successfully saved to Google Sheets';
+  } else if(status==='local'){
+    icon.style.background='var(--green-light)';
+    icon.innerHTML='<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    title.textContent='Order saved locally ✓';
+    title.style.color='var(--green-dark)';
+    subtitle.textContent='Saved on this device (Sheets not configured)';
+  } else if(status==='error'||status==='partial'){
+    icon.style.background='var(--red-light)';
+    icon.innerHTML='<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    title.textContent='Could not verify';
+    title.style.color='var(--red)';
+    subtitle.textContent='Order saved locally but Sheets confirmation failed. Try again or check connection.';
+  }
+
+  // Replace countdown with done button
+  resultEl.innerHTML=`<button onclick="document.getElementById('confirm-overlay').remove()" style="padding:14px 40px;border-radius:var(--radius);border:none;background:var(--green);color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px">Done</button>`;
 }
 
 function sendToSheets(order){
