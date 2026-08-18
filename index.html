@@ -572,22 +572,20 @@ function showVerifyResult(overlay, status, order, found){
 }
 
 function sendToSheets(order){
-  if(!SCRIPT_URL)return;
-  // Send each item as a separate GET request — Apps Script handles GET reliably
-  order.items.forEach(function(it){
-    const params=new URLSearchParams({
-      date: new Date(order.time).toLocaleDateString('en-IN'),
-      time: new Date(order.time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
-      waiter: order.waiter,
-      item: it.name,
-      qty: it.qty,
-      price: it.price,
-      subtotal: it.subtotal,
-      order_total: order.total,
-      note: order.note||''
-    });
-    fetch(SCRIPT_URL+'?'+params.toString(),{method:'GET',mode:'no-cors'}).catch(function(){});
-  });
+  if(!SCRIPT_URL||SCRIPT_URL==='__SCRIPT_URL_2__')return;
+  const rows=order.items.map(it=>({
+    date: new Date(order.time).toLocaleDateString('en-IN'),
+    time: new Date(order.time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+    waiter: order.waiter,
+    item: it.name,
+    qty: it.qty,
+    price: it.price,
+    subtotal: it.subtotal,
+    order_total: order.total,
+    note: order.note||''
+  }));
+  const encoded=encodeURIComponent(JSON.stringify(rows));
+  fetch(SCRIPT_URL+'?action=write&rows='+encoded,{method:'GET',mode:'no-cors'}).catch(function(){});
 }
 
 function showToast(msg){
