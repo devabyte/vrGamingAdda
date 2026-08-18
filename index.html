@@ -572,7 +572,7 @@ function showVerifyResult(overlay, status, order, found){
 }
 
 function sendToSheets(order){
-  if(!SCRIPT_URL||SCRIPT_URL==='__SCRIPT_URL_2__')return;
+  if(!SCRIPT_URL)return;
   const rows=order.items.map(it=>({
     date: new Date(order.time).toLocaleDateString('en-IN'),
     time: new Date(order.time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
