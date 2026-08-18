@@ -517,7 +517,7 @@ function showConfirmationScreen(order){
   const started=Date.now();
 
   function poll(){
-    if(!SCRIPT_URL||SCRIPT_URL==='__SCRIPT_URL_2__'){
+    if(!SCRIPT_URL||SCRIPT_URL==='__SCRIPT_URL__'){
       clearInterval(dotsInterval);
       showVerifyResult(overlay,'local',order);
       return;
