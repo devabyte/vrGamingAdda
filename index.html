@@ -511,7 +511,7 @@ function showConfirmationScreen(order){
     if(countdown.val<=0)clearInterval(interval);
   },1000);
 
-  // After 5s, fetch last rows from Sheets and verify
+  // After 10s, fetch last rows from Sheets and verify
   setTimeout(()=>{
     verifyWithSheets(order, overlay);
   },10000);
