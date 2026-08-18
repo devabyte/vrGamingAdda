@@ -476,19 +476,17 @@ function submitOrder(){
 }
 
 function showConfirmationScreen(order){
-  // Build confirmation overlay
   const overlay=document.createElement('div');
   overlay.id='confirm-overlay';
   overlay.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:8888;overflow-y:auto;-webkit-overflow-scrolling:touch;animation:fadeIn 0.2s ease';
 
-  const countdown={val:5};
-    overlay.innerHTML=`
+  overlay.innerHTML=`
     <div style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;gap:16px;">
       <div id="confirm-icon" style="width:64px;height:64px;border-radius:50%;background:var(--amber-light);display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>
       <h2 id="confirm-title" style="font-size:20px;font-weight:700;color:var(--text);letter-spacing:-0.3px">Verifying order…</h2>
-      <p id="confirm-subtitle" style="font-size:14px;color:var(--text2);text-align:center">Checking with Google Sheets in <span id="cd-num">10</span>s</p>
+      <p id="confirm-subtitle" style="font-size:14px;color:var(--text2);text-align:center">Checking Google Sheets <span id="cd-dots">.</span></p>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:320px;padding:16px">
         <p style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px">Items submitted</p>
         ${order.items.map(it=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px">
@@ -505,43 +503,59 @@ function showConfirmationScreen(order){
   `;
   document.getElementById('app').appendChild(overlay);
 
-  // Countdown
-  const cdEl=overlay.querySelector('#cd-num');
-  const interval=setInterval(()=>{
-    countdown.val--;
-    if(cdEl)cdEl.textContent=countdown.val;
-    if(countdown.val<=0)clearInterval(interval);
-  },1000);
+  // Animate dots while polling
+  const dotsEl=overlay.querySelector('#cd-dots');
+  let dotCount=1;
+  const dotsInterval=setInterval(()=>{
+    dotCount=(dotCount%3)+1;
+    if(dotsEl)dotsEl.textContent='.'.repeat(dotCount);
+  },500);
 
-  // After 10s, fetch last rows from Sheets and verify
-  setTimeout(()=>{
-    verifyWithSheets(order, overlay);
-  },10000);
-}
+  // Poll every 2 seconds, give up after 30 seconds
+  const MAX_WAIT=30000;
+  const POLL_INTERVAL=2000;
+  const started=Date.now();
 
-function verifyWithSheets(order, overlay){
-  const resultEl=overlay.querySelector('#cd-result');
-  if(!SCRIPT_URL||SCRIPT_URL==='__SCRIPT_URL__'){
-    showVerifyResult(overlay, 'local', order);
-    return;
+  function poll(){
+    if(!SCRIPT_URL||SCRIPT_URL==='__SCRIPT_URL_2__'){
+      clearInterval(dotsInterval);
+      showVerifyResult(overlay,'local',order);
+      return;
+    }
+    fetch(SCRIPT_URL+'?action=read&limit='+(order.items.length*3))
+      .then(r=>r.json())
+      .then(rows=>{
+        const found=order.items.filter(it=>
+          rows.some(r=>r.item===it.name&&r.waiter===order.waiter)
+        );
+        if(found.length===order.items.length){
+          // All items confirmed in sheet
+          clearInterval(dotsInterval);
+          showVerifyResult(overlay,'success',order);
+        } else if(Date.now()-started>=MAX_WAIT){
+          // Timed out
+          clearInterval(dotsInterval);
+          showVerifyResult(overlay,'error',order);
+        } else {
+          // Not found yet, try again
+          setTimeout(poll,POLL_INTERVAL);
+        }
+      })
+      .catch(()=>{
+        if(Date.now()-started>=MAX_WAIT){
+          clearInterval(dotsInterval);
+          showVerifyResult(overlay,'error',order);
+        } else {
+          setTimeout(poll,POLL_INTERVAL);
+        }
+      });
   }
-  fetch(SCRIPT_URL+'?action=read&limit='+order.items.length*2)
-    .then(r=>r.json())
-    .then(rows=>{
-      // Check if all items from this order appear in the last rows
-      const found=order.items.filter(it=>
-        rows.some(r=>r.item===it.name && r.waiter===order.waiter)
-      );
-      if(found.length===order.items.length){
-        showVerifyResult(overlay,'success',order);
-      } else {
-        showVerifyResult(overlay,'partial',order,found);
-      }
-    })
-    .catch(()=>{
-      showVerifyResult(overlay,'error',order);
-    });
+
+  // Start first poll after 2 seconds
+  setTimeout(poll, POLL_INTERVAL);
 }
+
+function verifyWithSheets(order, overlay){} // kept for compatibility
 
 function showVerifyResult(overlay, status, order, found){
   const icon=overlay.querySelector('#confirm-icon');
