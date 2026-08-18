@@ -17,7 +17,7 @@ jobs:
 
       - name: Inject secrets into index.html
         run: |
-          sed -i "s|__SCRIPT_URL__|${{ secrets.SCRIPT_URL }}|g" index.html
+          sed -i "s|__SCRIPT_URL_2__|${{ secrets.SCRIPT_URL_2 }}|g" index.html
           sed -i "s|__APP_PIN__|${{ secrets.APP_PIN }}|g" index.html
 
       - name: Deploy to GitHub Pages
