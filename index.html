@@ -479,27 +479,29 @@ function showConfirmationScreen(order){
   // Build confirmation overlay
   const overlay=document.createElement('div');
   overlay.id='confirm-overlay';
-  overlay.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:8888;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:20px;animation:fadeIn 0.2s ease';
+  overlay.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:8888;overflow-y:auto;-webkit-overflow-scrolling:touch;animation:fadeIn 0.2s ease';
 
   const countdown={val:5};
-  overlay.innerHTML=`
-    <div style="width:64px;height:64px;border-radius:50%;background:var(--amber-light);display:flex;align-items:center;justify-content:center">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    </div>
-    <h2 style="font-size:20px;font-weight:700;color:var(--text);letter-spacing:-0.3px">Verifying order…</h2>
-    <p style="font-size:14px;color:var(--text2);text-align:center">Checking with Google Sheets in <span id="cd-num">10</span>s</p>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:320px;padding:16px">
-      <p style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px">Items submitted</p>
-      ${order.items.map(it=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px">
-        <span style="color:var(--text)">${it.name}</span>
-        <span style="color:var(--text2)">×${it.qty}</span>
-      </div>`).join('')}
-      <div style="display:flex;justify-content:space-between;padding-top:10px;font-size:15px;font-weight:700">
-        <span style="color:var(--text)">Total</span>
-        <span style="color:var(--green)">₹${order.total.toLocaleString('en-IN')}</span>
+    overlay.innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;gap:16px;">
+      <div id="confirm-icon" style="width:64px;height:64px;border-radius:50%;background:var(--amber-light);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>
+      <h2 id="confirm-title" style="font-size:20px;font-weight:700;color:var(--text);letter-spacing:-0.3px">Verifying order…</h2>
+      <p id="confirm-subtitle" style="font-size:14px;color:var(--text2);text-align:center">Checking with Google Sheets in <span id="cd-num">10</span>s</p>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:320px;padding:16px">
+        <p style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px">Items submitted</p>
+        ${order.items.map(it=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px">
+          <span style="color:var(--text)">${it.name}</span>
+          <span style="color:var(--text2)">×${it.qty}</span>
+        </div>`).join('')}
+        <div style="display:flex;justify-content:space-between;padding-top:10px;font-size:15px;font-weight:700">
+          <span style="color:var(--text)">Total</span>
+          <span style="color:var(--green)">₹${order.total.toLocaleString('en-IN')}</span>
+        </div>
+      </div>
+      <div id="cd-result"></div>
     </div>
-    <div id="cd-result"></div>
   `;
   document.getElementById('app').appendChild(overlay);
 
@@ -542,9 +544,9 @@ function verifyWithSheets(order, overlay){
 }
 
 function showVerifyResult(overlay, status, order, found){
-  const icon=overlay.querySelector('div');
-  const title=overlay.querySelector('h2');
-  const subtitle=overlay.querySelector('p');
+  const icon=overlay.querySelector('#confirm-icon');
+  const title=overlay.querySelector('#confirm-title');
+  const subtitle=overlay.querySelector('#confirm-subtitle');
   const resultEl=overlay.querySelector('#cd-result');
 
   if(status==='success'){
