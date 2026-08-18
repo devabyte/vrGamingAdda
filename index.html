@@ -517,7 +517,7 @@ function showConfirmationScreen(order){
   const started=Date.now();
 
   function poll(){
-    if(!SCRIPT_URL||SCRIPT_URL==='https://script.google.com/macros/s/AKfycbzGngXR4R4RUAkAJ0-ly-8cphC_6T-o8ShOrRGv2VdZncFUZrfk20Nynz-xpS1_Y4ZitA/exec'){
+    if(!SCRIPT_URL||SCRIPT_URL==='__SCRIPT_URL__'){
       clearInterval(dotsInterval);
       showVerifyResult(overlay,'local',order);
       return;
